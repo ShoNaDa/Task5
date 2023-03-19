@@ -1,81 +1,73 @@
 ﻿using System.Text.RegularExpressions;
+using ConsoleApp1.Models;
 
-Dictionary<string, List<string>> db = new Dictionary<string, List<string>>(); //db
-
-Regex regexEmail = new Regex(@"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$");
-Regex regexPhone = new Regex("^\\+?[1-9][0-9]{7,14}$");
-
-bool EmailValid(string email)
+internal class Program
 {
-    var matchEmail = regexEmail.Match(email);
-    return matchEmail.Success;
-}
+    private static readonly Gr692BvvContext db = new Gr692BvvContext(); //db
 
-bool PhoneValid(string phone)
-{
-    var matchEmail = regexPhone.Match(phone);
-    return matchEmail.Success;
-}
+    //for check validation
+    private static readonly Regex regexEmail = new Regex(@"^([\w\.\-]+)@([\w\-]+)((\.(\w){2,3})+)$");
+    private static readonly Regex regexPhone = new Regex("^\\+?[1-9][0-9]{7,14}$");
 
-void ViewUser(string login, string pass, Dictionary<string, List<string>> db)
-{
-    //if user exist
-    if (db.Keys.Contains(login))
+    //func check email
+    private static bool EmailValid(string email)
     {
-        //check pass
-        if (db[login].ToList()[0] == pass)
-        {
-            //view info
-            foreach (var item in db[login].ToList())
-                Console.WriteLine(item);
-        }
-        else
-            Console.WriteLine("pass failed");
+        return regexEmail.Match(email).Success;
     }
-    else
-        Console.WriteLine("login not exist");
-}
 
-//reg user
-void Register(string fio, string birth, string address, string email, string phone, string login, string pass,
-    Dictionary<string, List<string>> db)
-{
-    //if user not exist
-    if (!db.Keys.Contains(login))
+    //func check phone
+    private static bool PhoneValid(string phone)
     {
-        DateTime newBirth;
-        //if birth valid
-        if (DateTime.TryParse(birth, out newBirth))
+        return regexPhone.Match(phone).Success;
+    }
+
+    //func for return user
+    private static void ViewUser(string login, string pass)
+    {
+        //if user exist
+        if (db.Users.Select(u => u.Login).Contains(login))
         {
-            //if email and phone valid
-            if (EmailValid(email) && PhoneValid(phone))
-                db[login] = new List<string> { pass, fio, birth, address, email, phone }; //add user
+            //check pass
+            if (db.Users.FirstOrDefault(u => u.Login == login).Password == pass)
+            {
+                var user = db.Users.FirstOrDefault(u => u.Login == login);
+                //view info
+                Console.WriteLine(
+                    $"fio: {user?.Fio}, birth: {user?.Birth}, address: {user?.Address}, email: {user?.Email}, phone: {user?.Phone}");
+            }
             else
-                Console.WriteLine("email of phone not valid");
+                Console.WriteLine("pass failed");
         }
         else
-            Console.WriteLine("dateTime not valid");
+            Console.WriteLine("login not exist");
     }
-    else
-        Console.WriteLine("login exist");
-}
 
-//edit info
-void EditInfo(Dictionary<string, List<string>> db, string login, string pass, List<string> newInfo)
-{
-    //check exist user
-    if (db.Keys.Contains(login))
+    //func for reg user
+    private static void Register(string fio, string birth, string address, string email, string phone, string login,
+        string pass)
     {
-        //check pass
-        if (db[login].ToList()[0] == pass)
+        //if user not exist
+        if (!db.Users.Select(u => u.Login).Contains(login))
         {
-            DateTime newBirth;
             //if birth valid
-            if (DateTime.TryParse(newInfo[2], out newBirth))
+            if (DateTime.TryParse(birth, out _))
             {
                 //if email and phone valid
-                if (EmailValid(newInfo[3]) && PhoneValid(newInfo[4]))
-                    db[login] = newInfo; //edit info
+                if (EmailValid(email) && PhoneValid(phone))
+                {
+                    db.Users.Add(new User
+                    {
+                        Login = login,
+                        Password = pass,
+                        Fio = fio,
+                        Birth = birth,
+                        Address = address,
+                        Email = email,
+                        Phone = phone
+                    }); //add user
+
+                    db.SaveChanges();
+                }
                 else
                     Console.WriteLine("email of phone not valid");
             }
@@ -83,103 +75,106 @@ void EditInfo(Dictionary<string, List<string>> db, string login, string pass, Li
                 Console.WriteLine("dateTime not valid");
         }
         else
-            Console.WriteLine("pass failed");
+            Console.WriteLine("login exist");
     }
-    else
-        Console.WriteLine("user not exist");
-}
 
-//search user
-void SearchUser(Dictionary<string, List<string>> db, string fio)
-{
-    //search fio
-    if (db.Values.ToList()[1].Contains(fio))
+    //func for edit info
+    private static void EditInfo(string login, string pass, User newInfo)
     {
-        var user = db.Values.FirstOrDefault(u => u.ToList()[1] == fio);
-        foreach (var item in user)
-            Console.WriteLine(item);
-    }
-    else
-        Console.WriteLine("fio not exist");
-}
+        //check exist user
+        if (db.Users.Select(u => u.Login).Contains(login))
+        {
+            //check pass
+            if (db.Users.FirstOrDefault(u => u.Login == login).Login == pass)
+            {
+                //if birth valid
+                if (DateTime.TryParse(newInfo.Birth, out _))
+                {
+                    //if email and phone valid
+                    if (EmailValid(newInfo.Email) && PhoneValid(newInfo.Phone))
+                    {
+                        //edit info
+                        db.Users.FirstOrDefault(u => u.Login == login).Password = newInfo.Password;
+                        db.Users.FirstOrDefault(u => u.Login == login).Fio = newInfo.Fio;
+                        db.Users.FirstOrDefault(u => u.Login == login).Birth = newInfo.Birth;
+                        db.Users.FirstOrDefault(u => u.Login == login).Address = newInfo.Address;
+                        db.Users.FirstOrDefault(u => u.Login == login).Email = newInfo.Email;
+                        db.Users.FirstOrDefault(u => u.Login == login).Phone = newInfo.Phone;
 
-//search user version 2
-void SearchUser2(Dictionary<string, List<string>> db, string fio)
-{
-    //search fio
-    if (db.Values.ToList()[1].Contains(fio))
-    {
-        //later
-    }
-    else
-        Console.WriteLine("fio not exist");
-}
-
-//remove user
-void RemoveUser(Dictionary<string, List<string>> db, string login, string pass)
-{
-    //check exist user
-    if (db.Keys.Contains(login))
-    {
-        //check pass
-        if (db[login].ToList()[0] == pass)
-            db.Remove(login);
+                        db.SaveChanges();
+                    }
+                    else
+                        Console.WriteLine("email of phone not valid");
+                }
+                else
+                    Console.WriteLine("dateTime not valid");
+            }
+            else
+                Console.WriteLine("pass failed");
+        }
         else
-            Console.WriteLine("pass failed");
+            Console.WriteLine("user not exist");
     }
-    else
-        Console.WriteLine("user not exist");
-}
 
-//search young users
-void SearchYoungUsers(Dictionary<string, List<string>> db)
-{
-    var user = db.Values.FirstOrDefault(u =>
-        Convert.ToDateTime(u[2]).Year == db.Values.ToList()[2].Min(m => Convert.ToDateTime(m[2]).Year));
-    foreach (var item in user)
+    //func for search user
+    private static List<User> SearchUser(string fio)
     {
-        Console.WriteLine(item);
+        //search fio
+        if (db.Users.Select(u => u.Fio).Contains(fio))
+        {
+            return db.Users.Where(u => u.Fio == fio).ToList();
+        }
+
+        Console.WriteLine("fio not exist");
+        return null;
+    }
+
+    //func for search user version 2
+    private static List<User> SearchUser2(string fio)
+    {
+        //search fio
+        if (true)
+        {
+            return db.Users.Where(u => u.Fio == fio).ToList();
+            //later
+        }
+        else
+            Console.WriteLine("fio not exist");
+    }
+
+    //func for remove user
+    private static void RemoveUser(string login, string pass)
+    {
+        //check exist user
+        if (db.Users.Select(u => u.Login).Contains(login))
+        {
+            //check pass
+            if (db.Users.FirstOrDefault(u => u.Login == login).Login == pass)
+            {
+                db.Users.Remove(db.Users.FirstOrDefault(u => u.Login == login));
+                db.SaveChanges();
+            }
+            else
+                Console.WriteLine("pass failed");
+        }
+        else
+            Console.WriteLine("user not exist");
+    }
+
+    //func for search young users
+    private static List<User> SearchYoungUsers()
+    {
+        return db.Users
+            .Where(u => Convert.ToDateTime(u.Birth).Year == db.Users.Min(o => Convert.ToDateTime(o.Birth).Year))
+            .ToList();
+    }
+
+    private static void Main(string[] args)
+    {
+        Register("bvv", "26.07.2003", "tomsk", "bvv@gmail.com", "89539152059", "bvv", "123");
+        
+        ViewUser("bvv", "123");
+        
+        
     }
 }
-
-Dictionary<string, List<string>> db1 = new Dictionary<string, List<string>>
-{
-    { "bvv", new List<string> { "123", "bvv", "26.07.2003", "tomsk", "bvv@g,ail.com", "89539152059" } },
-    { "kns", new List<string> { "321", "kns", "02.04.2002", "tomsk", "kns@g,ail.com", "89539152059" } }
-};
-SearchYoungUsers(db1);
-
-//--TEST--
-Console.WriteLine("Enter fio, birth, address, email, phone, login and pass");
-//register new user
-Register(Console.ReadLine(), Console.ReadLine(), Console.ReadLine(), Console.ReadLine(), Console.ReadLine(),
-    Console.ReadLine(), Console.ReadLine(), db);
-
-Console.WriteLine("Enter login and pass");
-//view all info
-ViewUser(Console.ReadLine(), Console.ReadLine(), db);
-
-Console.WriteLine("Enter login, pass, new: pass, fio, birth, address, email, phone");
-//edit info user
-EditInfo(db, Console.ReadLine(), Console.ReadLine(),
-    new List<string>
-    {
-        Console.ReadLine(), Console.ReadLine(), Console.ReadLine(),
-        Console.ReadLine(), Console.ReadLine(), Console.ReadLine()
-    });
-
-Console.WriteLine("Enter login and pass");
-//view all info
-ViewUser(Console.ReadLine(), Console.ReadLine(), db);
-
-Console.WriteLine("Enter fio");
-//search user
-SearchUser(db, Console.ReadLine());
-
-Console.WriteLine("Enter login and pass");
-//remove user
-RemoveUser(db, Console.ReadLine(), Console.ReadLine());
-
-Console.WriteLine("Enter login and pass");
-//view all info
-ViewUser(Console.ReadLine(), Console.ReadLine(), db);
